@@ -81,7 +81,22 @@ except:
 # ------------------------------------------
 XTERM = re.search("rxvt|xterm", os.environ["TERM"])
 CONTROL_FIFO = "%s/cplay-control-%s" % (os.environ.get("TMPDIR", "/tmp"), os.environ["USER"])
+SPEED_OFFSET = 0.005
 
+def mplayer_send(arg):
+    logging.debug("Sending command " + arg);
+    if not os.path.exists(CONTROL_FIFO + "-mplayer"):
+        os.mkfifo(CONTROL_FIFO + "-mplayer", 0600)
+
+    if os.path.exists(CONTROL_FIFO + "-mplayer"):
+        try:
+            fifo = open(CONTROL_FIFO + "-mplayer", 'w')
+            fifo.write(arg + "\n")
+            fifo.flush()
+            fifo.close()
+        except IOError:
+            logging.warning("Permission problem with mplayer fifo.")
+    
 # ------------------------------------------
 def which(program):
     for path in string.split(os.environ["PATH"], ":"):
@@ -1388,14 +1403,8 @@ class MPlayer(Player):
     re_progress = re.compile("^A:.*?(\d+)\.\d \([^)]+\) of (\d+)\.\d")
 
     def play(self):
-        if os.path.exists(CONTROL_FIFO + "-mplayer"):
-            os.unlink(CONTROL_FIFO + "-mplayer")
-        os.mkfifo(CONTROL_FIFO + "-mplayer", 0600)
         Player.play(self)
-        fifo = open(CONTROL_FIFO + "-mplayer", 'w')
-        fifo.write("seek %d\n" % self.offset)
-        fifo.flush()
-        fifo.close()
+        mplayer_send("seek %d\n" % self.offset)
 
     def parse_buf(self):
         match = self.re_progress.search(self.buf)
