@@ -330,6 +330,9 @@ class RootWindow(Window):
         keymap.bind('q', self.command_quit, ())
         keymap.bind('v', app.mixer, ("toggle",))
         keymap.bind(',', app.command_macro, ())
+        keymap.bind('[', app.speed_decr, ())
+        keymap.bind(']', app.speed_incr, ())
+        keymap.bind('=', app.speed_reset, ())
 
     def command_quit(self):
         app.do_input_hook = self.do_quit
@@ -1542,6 +1545,7 @@ class Application:
         self.kludge = 0
         self.win_filelist.listdir()
         self.control = FIFOControl()
+        self.speed = 1.0
 
     def cleanup(self):
         try: curses.endwin()
@@ -1600,6 +1604,7 @@ class Application:
             self.player.stopped = 0  # keep going
             return
         self.player.play()
+        mplayer_send("speed_set " + str(self.speed))
 
     def delayed_play(self, entry, offset):
         if self.play_tid: self.timeout.remove(self.play_tid)
@@ -1653,6 +1658,20 @@ class Application:
         if cmd in ["set", "cue"]: set(channel, (arg, arg))
         app.status(_("%s volume %s%%") % (name, get(channel)[0]), 1)
         mixer.close()
+
+    def speed_chg(self, set):
+        mplayer_send("speed_set " + str(set))
+	self.speed = set
+        app.status(_("Speed: %s%%") % (self.speed * 100), 1)
+
+    def speed_incr(self):
+        self.speed_chg(self.speed + SPEED_OFFSET)
+
+    def speed_decr(self):
+        self.speed_chg(self.speed - SPEED_OFFSET)
+
+    def speed_reset(self):
+        self.speed_chg(1.0)
 
     def show_input(self):
         n = len(self.input_prompt)+1
