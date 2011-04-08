@@ -672,7 +672,7 @@ class TagListWindow(ListWindow):
                app.win_root.update()
                app.restore_default_status()
        else:
-               app.status(_("Shell exit code 0 - successfully returned\n"), 2)
+               app.status(_("Command successfully executed.\n"), 2)
                app.win_root.update()
         app.cursor(0)
 
