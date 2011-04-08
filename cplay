@@ -81,6 +81,18 @@ except:
 # ------------------------------------------
 XTERM = re.search("rxvt|xterm", os.environ["TERM"])
 CONTROL_FIFO = "%s/cplay-control-%s" % (os.environ.get("TMPDIR", "/tmp"), os.environ["USER"])
+
+
+EQUALIZER_ROCK = "3:3:3:2:0:-1:-1:0:0:1"
+EQUALIZER_FLAT = "0:0:0:0:0:0:0:0:0:0"
+EQUALIZER_HEAVY = "3:3:3:2:0:0:0:0:0:1"
+
+EQUALIZERS = [
+            (EQUALIZER_ROCK, "rock"), 
+            (EQUALIZER_FLAT, "flat"), 
+            (EQUALIZER_HEAVY, "heavy"),
+            #"12:12:12:12:0:0:0:0:1:2", "invalid - for testing only")
+            ]
 SPEED_OFFSET = 0.005
 
 def mplayer_send(arg):
@@ -332,6 +344,8 @@ class RootWindow(Window):
         keymap.bind('[', app.speed_decr, ())
         keymap.bind(']', app.speed_incr, ())
         keymap.bind('=', app.speed_reset, ())
+        keymap.bind('e', app.eq_next, ())
+        keymap.bind('E', app.eq_prev, ())
 
     def command_quit(self):
         app.do_input_hook = self.do_quit
@@ -1545,6 +1559,8 @@ class Application:
         self.win_filelist.listdir()
         self.control = FIFOControl()
         self.speed = 1.0
+        self.eq_cur = 0
+        self.equalizer = EQUALIZERS[self.eq_cur][0]
 
     def cleanup(self):
         try: curses.endwin()
@@ -1604,6 +1620,7 @@ class Application:
             return
         self.player.play()
         mplayer_send("speed_set " + str(self.speed))
+        mplayer_send("af equalizer=" + self.equalizer)
 
     def delayed_play(self, entry, offset):
         if self.play_tid: self.timeout.remove(self.play_tid)
@@ -1671,6 +1688,18 @@ class Application:
 
     def speed_reset(self):
         self.speed_chg(1.0)
+
+    def eq_chg(self, offset):
+        self.eq_cur = (self.eq_cur + offset) % (len(EQUALIZERS))
+        self.equalizer = EQUALIZERS[self.eq_cur][0]
+        app.status(_("Equalizer: %s(%s)") % (EQUALIZERS[self.eq_cur][1], self.equalizer), 1)
+        mplayer_send("af equalizer=" + self.equalizer);
+    
+    def eq_next(self):
+        self.eq_chg(1)
+    
+    def eq_prev(self):
+        self.eq_chg(-1)
 
     def show_input(self):
         n = len(self.input_prompt)+1
