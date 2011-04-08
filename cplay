@@ -95,8 +95,7 @@ def mplayer_send(arg):
             fifo.flush()
             fifo.close()
         except IOError:
-            logging.warning("Permission problem with mplayer fifo.")
-    
+            logging.warning("Can't open " + CONTROL_FIFO + "-mplayer for writing.")
 # ------------------------------------------
 def which(program):
     for path in string.split(os.environ["PATH"], ":"):
